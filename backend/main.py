@@ -430,19 +430,37 @@ def agregar_nuevo_lote_final(material_id: int, payload: LotePayload):
 @app.get("/materiales/stock-bajo")
 def obtener_stock_bajo():
     conn = get_db_connection()
-    if not conn: return []
+    if not conn:
+        return []
+
     cur = conn.cursor()
+
     try:
         cur.execute("""
-            SELECT id, material, tipo, stock, stock_minimo 
-            FROM materiales 
-            WHERE stock <= stock_minimo 
+            SELECT id, material, tipo, stock, stock_minimo
+            FROM materiales
+            WHERE stock <= stock_minimo
             ORDER BY stock ASC
         """)
-        return cur.fetchall()
+
+        rows = cur.fetchall()
+
+        materiales = []
+        for r in rows:
+            materiales.append({
+                "id": r[0],
+                "material": r[1],
+                "tipo": r[2],
+                "stock": r[3],
+                "stock_minimo": r[4]
+            })
+
+        return materiales
+
     finally:
         cur.close()
         conn.close()
+
         
 @app.get("/material/{id}/movimientos")
 def obtener_historial_material(id: int):
