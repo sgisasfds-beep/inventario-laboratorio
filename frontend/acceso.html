@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LabAsset 360 | Nexus Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: radial-gradient(circle at top left, #1e1b4b, #020617);
+            height: 100vh;
+            overflow: hidden;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .neo-shadow { box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="flex items-center justify-center">
+    <div class="relative w-full max-w-md p-4">
+        <div class="absolute -top-10 -left-10 w-32 h-32 bg-indigo-600 rounded-full blur-[80px] opacity-30"></div>
+        <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-500 rounded-full blur-[80px] opacity-20"></div>
+
+        <div class="glass-card rounded-[2.5rem] p-10 relative z-10 text-white shadow-2xl">
+            <div class="flex flex-col items-center mb-8">
+                <div class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-4 neo-shadow">
+                    <i data-lucide="shield-check" class="w-7 h-7 text-white"></i>
+                </div>
+                <h1 id="auth-title" class="text-2xl font-bold tracking-tight">LabAsset 360 <span class="text-indigo-400">Auth</span></h1>
+                <p id="auth-subtitle" class="text-slate-400 text-xs mt-1">Sistema de Gestión de Metales</p>
+            </div>
+
+            <form id="loginForm" class="space-y-4">
+                <div class="relative">
+                    <i data-lucide="user" class="absolute left-4 top-4 w-5 h-5 text-slate-500"></i>
+                    <input type="text" id="l-user" placeholder="Usuario ID" required class="w-full bg-slate-900/50 border border-slate-700 rounded-2xl pl-12 pr-5 py-4 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm">
+                </div>
+                <div class="relative">
+                    <i data-lucide="lock" class="absolute left-4 top-4 w-5 h-5 text-slate-500"></i>
+                    <input type="password" id="l-pass" placeholder="Contraseña" required class="w-full bg-slate-900/50 border border-slate-700 rounded-2xl pl-12 pr-5 py-4 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm">
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 group">
+                    Ingresar
+                    <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                </button>
+                <p class="text-center text-[10px] text-slate-400 uppercase tracking-widest">¿No tienes cuenta? <a href="#" onclick="toggleAuth()" class="text-indigo-400 hover:underline">Regístrate</a></p>
+            </form>
+
+            <form id="registerForm" class="space-y-4 hidden">
+                <input type="text" id="r-user" placeholder="Nuevo Usuario" required class="w-full bg-slate-900/50 border border-slate-700 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <input type="password" id="r-pass" placeholder="Contraseña" required class="w-full bg-slate-900/50 border border-slate-700 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 px-1">Asignar Rol</label>
+                    <select id="r-rol" class="w-full bg-slate-900/50 border border-slate-700 rounded-2xl px-5 py-3 outline-none focus:ring-2 focus:ring-indigo-500 text-sm appearance-none cursor-pointer">
+                        <option value="auxiliar">Auxiliar de Laboratorio</option>
+                        <option value="analista Instrumental">Analista Instrumental</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl transition-all">Crear Cuenta</button>
+                <p class="text-center text-[10px] text-slate-400 uppercase tracking-widest">¿Ya tienes cuenta? <a href="#" onclick="toggleAuth()" class="text-indigo-400 hover:underline">Inicia Sesión</a></p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const API_URL = "http://127.0.0.1:8000";
+
+        function toggleAuth() {
+            document.getElementById('loginForm').classList.toggle('hidden');
+            document.getElementById('registerForm').classList.toggle('hidden');
+            document.getElementById('auth-title').innerHTML = document.getElementById('loginForm').classList.contains('hidden') 
+                ? 'Nuevo <span class="text-emerald-400">Usuario</span>' 
+                : 'LabAsset 360 <span class="text-indigo-400">Auth</span>';
+        }
+
+        // Lógica de Registro
+        document.getElementById('registerForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                username: document.getElementById('r-user').value,
+                password: document.getElementById('r-pass').value,
+                rol: document.getElementById('r-rol').value
+            };
+            const res = await fetch(`${API_URL}/auth/registrar`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+            if(res.ok) { alert('Usuario creado exitosamente'); toggleAuth(); }
+            else { alert('Error: El usuario ya existe'); }
+        };
+
+        // Lógica de Login
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                username: document.getElementById('l-user').value,
+                password: document.getElementById('l-pass').value
+            };
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+            if(res.ok) {
+                const user = await res.json();
+                localStorage.setItem('userRole', user.rol);
+                window.location.href = 'index.html';
+            } else { alert('Credenciales incorrectas'); }
+        };
+    </script>
+</body>
+</html>
