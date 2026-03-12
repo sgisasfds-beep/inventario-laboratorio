@@ -12,6 +12,10 @@ from fastapi import APIRouter, HTTPException
 app = FastAPI(redirect_slashes=True)
 router = APIRouter()
 
+origins = [
+    "https://inventario-laboratorio.onrender.com"
+]
+
 
 app.add_middleware(
     CORSMiddleware,
