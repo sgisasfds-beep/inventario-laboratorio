@@ -8,19 +8,14 @@ from psycopg2.extras import RealDictCursor
 from datetime import date
 from fastapi import APIRouter, HTTPException
 
-# Configuración de la APPs
+# Configuración de la APP
 app = FastAPI(redirect_slashes=True)
 router = APIRouter()
-
-origins = [
-    "https://inventario-laboratorio.onrender.com"
-]
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -435,37 +430,19 @@ def agregar_nuevo_lote_final(material_id: int, payload: LotePayload):
 @app.get("/materiales/stock-bajo")
 def obtener_stock_bajo():
     conn = get_db_connection()
-    if not conn:
-        return []
-
+    if not conn: return []
     cur = conn.cursor()
-
     try:
         cur.execute("""
-            SELECT id, material, tipo, stock, stock_minimo
-            FROM materiales
-            WHERE stock <= stock_minimo
+            SELECT id, material, tipo, stock, stock_minimo 
+            FROM materiales 
+            WHERE stock <= stock_minimo 
             ORDER BY stock ASC
         """)
-
-        rows = cur.fetchall()
-
-        materiales = []
-        for r in rows:
-            materiales.append({
-                "id": r[0],
-                "material": r[1],
-                "tipo": r[2],
-                "stock": r[3],
-                "stock_minimo": r[4]
-            })
-
-        return materiales
-
+        return cur.fetchall()
     finally:
         cur.close()
         conn.close()
-
         
 @app.get("/material/{id}/movimientos")
 def obtener_historial_material(id: int):
