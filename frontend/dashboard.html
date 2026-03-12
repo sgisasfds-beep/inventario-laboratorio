@@ -106,7 +106,7 @@
             <section id="dashboard" class="tab-content active space-y-8 animate-in fade-in duration-500">
                 <header>
                     <h1 class="text-3xl font-bold text-slate-900">Resumen de Operación</h1>
-                    <p class="text-slate-500">Estado actual del laboratorio y materiales críticos.</p>
+                    <p class="text-slate-500">Estado actual del area Instrumental y materiales críticos.</p>
                 </header>
 
                 <div id="alarmas-vencimiento" class="hidden"></div>
@@ -141,7 +141,7 @@
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h1 class="text-3xl font-bold text-slate-900">Catálogo Volumétrico</h1>
-                        <p class="text-slate-500">Gestiona tu inventario y genera pedidos por WhatsApp.</p>
+                        <p class="text-slate-500">Gestion de inventario y genera pedidos por WhatsApp.</p>
                     </div>
                     <div class="flex gap-3">
                         <button onclick="openModal('modal')"
@@ -160,7 +160,7 @@
             </section>
 
             <section id="historial" class="tab-content space-y-8 animate-in fade-in duration-500">
-                <h1 class="text-3xl font-bold text-slate-900">Historial de Suministros</h1>
+                <h1 class="text-3xl font-bold text-slate-900">Historial de Pedidos</h1>
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <table class="w-full text-left block md:table">
                         <thead
@@ -1004,7 +1004,7 @@
             if (!rol) {
                 window.location.href = 'index.html';
                 return;
-                
+
             }
 
             console.log("Sesión activa - Rol:", rol);
