@@ -8,7 +8,7 @@ from psycopg2.extras import RealDictCursor
 from datetime import date
 from fastapi import APIRouter, HTTPException
 
-# Configuración de la APP
+# Configuración de la APPs
 app = FastAPI(redirect_slashes=True)
 router = APIRouter()
 
