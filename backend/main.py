@@ -302,7 +302,7 @@ async def registrar_reactivo_completo(
         if fds:
             upload_fds = cloudinary.uploader.upload(
                 fds.file, 
-                resource_type="raw", 
+                resource_type="image", 
                 folder="laboratorio/fds",
                 public_id=f"fds_{nombre.replace(' ', '_')}_{lote}.pdf"
             )
@@ -311,7 +311,7 @@ async def registrar_reactivo_completo(
         if coa:
             upload_coa = cloudinary.uploader.upload(
                 coa.file, 
-                resource_type="raw", 
+                resource_type="image", 
                 folder="laboratorio/coa",
                 public_id=f"coa_{nombre.replace(' ', '_')}_{lote}.pdf"
             )
