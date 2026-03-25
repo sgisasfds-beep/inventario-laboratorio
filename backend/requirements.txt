@@ -5,3 +5,4 @@ pydantic
 sqlalchemy
 cloudinary
 python-multipart
+reportlab

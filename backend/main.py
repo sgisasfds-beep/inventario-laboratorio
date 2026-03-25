@@ -304,7 +304,7 @@ async def registrar_reactivo_completo(
                 fds.file, 
                 resource_type="raw", 
                 folder="laboratorio/fds",
-                public_id=f"fds_{nombre.replace(' ', '_')}_{lote}"
+                public_id=f"fds_{nombre.replace(' ', '_')}_{lote}.pdf"
             )
             url_fds = upload_fds.get("secure_url")
         
@@ -313,7 +313,7 @@ async def registrar_reactivo_completo(
                 coa.file, 
                 resource_type="raw", 
                 folder="laboratorio/coa",
-                public_id=f"coa_{nombre.replace(' ', '_')}_{lote}"
+                public_id=f"coa_{nombre.replace(' ', '_')}_{lote}.pdf"
             )
             url_coa = upload_coa.get("secure_url")
 
