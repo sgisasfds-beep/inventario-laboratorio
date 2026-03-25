@@ -3,3 +3,5 @@ uvicorn
 psycopg2-binary
 pydantic
 sqlalchemy
+cloudinary
+python-multipart

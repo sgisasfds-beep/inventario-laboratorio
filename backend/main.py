@@ -7,6 +7,9 @@ import os
 from psycopg2.extras import RealDictCursor
 from datetime import date
 from fastapi import APIRouter, HTTPException
+import cloudinary
+import cloudinary.uploader
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 
 # Configuración de la APP
 app = FastAPI(redirect_slashes=True)
@@ -18,6 +21,12 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+)
+cloudinary.config( 
+  cloud_name = "dqkpkjkyz", 
+  api_key = "899689523525533", 
+  api_secret = os.getenv("CLOUDINARY_API_SECRET"),
+  secure = True
 )
 
 def get_db_connection():
@@ -270,37 +279,79 @@ def marcar_entregado(id: int):
 # --- GESTIÓN AVANZADA DE REACTIVOS ---
 
 @app.post("/registrar-reactivo-completo")
-def registrar_reactivo_completo(data: ReactivoRegistro):
+async def registrar_reactivo_completo(
+    nombre: str = Form(...),
+    categoria: str = Form(...),
+    caracteristicas: str = Form(...),
+    stock_minimo: float = Form(...),
+    lote: str = Form(...),
+    cantidad_frascos: int = Form(...),
+    volumen_por_frasco: float = Form(...),
+    fecha_vencimiento: str = Form(...),
+    fds: UploadFile = File(None), # Archivo opcional
+    coa: UploadFile = File(None)  # Archivo opcional
+):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        total_ml_inicial = data.cantidad_frascos * data.volumen_por_frasco
+        url_fds = None
+        url_coa = None
+
+        # 1. Subir archivos a Cloudinary si existen
+        # Usamos resource_type="raw" para que Cloudinary no intente procesar el PDF como imagen
+        if fds:
+            upload_fds = cloudinary.uploader.upload(
+                fds.file, 
+                resource_type="raw", 
+                folder="laboratorio/fds",
+                public_id=f"fds_{nombre.replace(' ', '_')}_{lote}"
+            )
+            url_fds = upload_fds.get("secure_url")
+        
+        if coa:
+            upload_coa = cloudinary.uploader.upload(
+                coa.file, 
+                resource_type="raw", 
+                folder="laboratorio/coa",
+                public_id=f"coa_{nombre.replace(' ', '_')}_{lote}"
+            )
+            url_coa = upload_coa.get("secure_url")
+
+        # 2. Insertar en tabla 'materiales' incluyendo las nuevas columnas de URL
+        total_ml_inicial = cantidad_frascos * volumen_por_frasco
         cur.execute("""
-            INSERT INTO materiales (tipo, material, caracteristicas, stock, stock_minimo)
-            VALUES (%s, %s, %s, %s, %s) RETURNING id
-        """, (data.categoria, data.nombre, data.caracteristicas, total_ml_inicial, data.stock_minimo))
+            INSERT INTO materiales (tipo, material, caracteristicas, stock, stock_minimo, fds_url, coa_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (categoria, nombre, caracteristicas, total_ml_inicial, stock_minimo, url_fds, url_coa))
+        
         material_id = cur.fetchone()['id']
 
-        for _ in range(data.cantidad_frascos):
+        # 3. Insertar los frascos individuales
+        for _ in range(cantidad_frascos):
             cur.execute("""
                 INSERT INTO frascos_reactivos (material_id, lote, fecha_vencimiento, volumen_inicial, volumen_actual, estado)
                 VALUES (%s, %s, %s, %s, %s, 'activo')
-            """, (material_id, data.lote, data.fecha_vencimiento, data.volumen_por_frasco, data.volumen_por_frasco))
+            """, (material_id, lote, fecha_vencimiento, volumen_por_frasco, volumen_por_frasco))
         
+        # 4. Registrar en el historial
         cur.execute("""
             INSERT INTO historial_movimientos (material_id, tipo, cantidad, lote, observacion, es_reactivo)
             VALUES (%s, 'entrada', %s, %s, %s, True)
-        """, (material_id, total_ml_inicial, data.lote, f"Registro inicial de {data.cantidad_frascos} frascos"))
+        """, (material_id, total_ml_inicial, lote, f"Registro inicial de {cantidad_frascos} frascos"))
 
         conn.commit()
-        return {"status": "ok"}
+        return {"status": "ok", "material_id": material_id}
+
     except Exception as e:
-        conn.rollback()
+        if conn:
+            conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        cur.close()
-        conn.close()
-
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+            
 @app.get("/material/{id}/lotes-disponibles")
 def obtener_lotes(id: int):
     conn = get_db_connection()
