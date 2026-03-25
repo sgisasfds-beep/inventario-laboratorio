@@ -595,56 +595,81 @@
             }
         }
         async function guardarMaterial() {
+            // Asegúrate de que API_URL esté definido correctamente
+            const API_URL = "https://inventario-api-85mp.onrender.com";
             const categoria = document.getElementById('reg-tipo').value;
 
             // --- CASO 1: REGISTRO DE REACTIVOS (CON ARCHIVOS Y FRASCOS) ---
             if (categoria === 'Reactivos') {
                 const formData = new FormData();
 
-                // Agregamos los datos de texto
-                formData.append('nombre', document.getElementById('reg-nombre').value);
+                // 1. Capturamos los valores y forzamos el tipo de dato correcto
+                const nombre = document.getElementById('reg-nombre').value;
+                const caract = document.getElementById('reg-caract').value;
+                const min = parseFloat(document.getElementById('reg-min').value) || 0;
+                const lote = document.getElementById('reg-lote').value;
+                const frascos = parseInt(document.getElementById('reg-frascos').value) || 1;
+                const vol = parseFloat(document.getElementById('reg-vol-ml').value) || 0;
+                const vence = document.getElementById('reg-vence').value;
+
+                // Validación básica: la fecha es obligatoria en el backend
+                if (!vence) {
+                    alert("⚠️ Por favor, selecciona una fecha de vencimiento.");
+                    return;
+                }
+
+                // 2. Agregamos los datos al FormData (los nombres deben ser idénticos a main.py)
+                formData.append('nombre', nombre);
                 formData.append('categoria', categoria);
-                formData.append('caracteristicas', document.getElementById('reg-caract').value);
-                formData.append('stock_minimo', parseFloat(document.getElementById('reg-min').value) || 0);
-                formData.append('lote', document.getElementById('reg-lote').value);
-                formData.append('cantidad_frascos', parseInt(document.getElementById('reg-frascos').value) || 1);
-                formData.append('volumen_por_frasco', parseFloat(document.getElementById('reg-vol-ml').value) || 0);
-                formData.append('fecha_vencimiento', document.getElementById('reg-vence').value);
+                formData.append('caracteristicas', caract);
+                formData.append('stock_minimo', min);
+                formData.append('lote', lote || "N/A");
+                formData.append('cantidad_frascos', frascos);
+                formData.append('volumen_por_frasco', vol);
+                formData.append('fecha_vencimiento', vence);
 
-                // Agregamos los archivos PDF capturados de los nuevos inputs
-                const fdsFile = document.getElementById('reg-fds').files[0];
-                const coaFile = document.getElementById('reg-coa').files[0];
+                // 3. Agregamos los archivos si han sido seleccionados
+                const fdsInput = document.getElementById('reg-fds');
+                const coaInput = document.getElementById('reg-coa');
 
-                if (fdsFile) formData.append('fds', fdsFile);
-                if (coaFile) formData.append('coa', coaFile);
+                if (fdsInput && fdsInput.files[0]) {
+                    formData.append('fds', fdsInput.files[0]);
+                }
+                if (coaInput && coaInput.files[0]) {
+                    formData.append('coa', coaInput.files[0]);
+                }
 
                 try {
                     const res = await fetch(`${API_URL}/registrar-reactivo-completo`, {
                         method: 'POST',
-                        // IMPORTANTE: Al usar FormData no se debe poner 'Content-Type' manualmente
+                        // NOTA: No añadimos 'Content-Type' manual, el navegador lo hará por nosotros
                         body: formData
                     });
 
                     if (res.ok) {
                         alert("✅ Reactivo, frascos y documentos registrados con éxito.");
-                        limpiarYCerrar();
+                        if (typeof limpiarYCerrar === 'function') limpiarYCerrar();
+                        // Refrescar datos si tienes estas funciones definidas
+                        if (typeof obtenerMateriales === 'function') obtenerMateriales();
+                        if (typeof resumen_dashboard === 'function') resumen_dashboard();
                     } else {
                         const errorData = await res.json();
-                        alert("❌ Error: " + errorData.detail);
+                        console.error("Detalle del error 422:", errorData);
+                        alert("❌ Error de validación: " + JSON.stringify(errorData.detail));
                     }
                 } catch (e) {
-                    console.error(e);
+                    console.error("Error en la conexión:", e);
                     alert("Error de conexión con el servidor");
                 }
 
             } else {
-                // --- CASO 2: REGISTRO NORMAL (VIDRIERÍA, EQUIPOS, ETC.) ---
+                // --- CASO 2: REGISTRO NORMAL (VIDRIERÍA, EQUIPOS, ETC. USANDO JSON) ---
                 const data = {
                     tipo: categoria,
                     material: document.getElementById('reg-nombre').value,
                     caracteristicas: document.getElementById('reg-caract').value,
-                    stock: parseInt(document.getElementById('reg-stock').value) || 0,
-                    stock_minimo: parseInt(document.getElementById('reg-min').value) || 0
+                    stock: parseFloat(document.getElementById('reg-stock').value) || 0,
+                    stock_minimo: parseFloat(document.getElementById('reg-min').value) || 0
                 };
 
                 try {
@@ -655,10 +680,15 @@
                     });
 
                     if (res.ok) {
-                        alert("✅ Registrado con éxito.");
-                        limpiarYCerrar();
+                        alert("✅ Material registrado con éxito.");
+                        if (typeof limpiarYCerrar === 'function') limpiarYCerrar();
+                        if (typeof obtenerMateriales === 'function') obtenerMateriales();
+                    } else {
+                        const errorData = await res.json();
+                        alert("❌ Error: " + JSON.stringify(errorData.detail));
                     }
                 } catch (e) {
+                    console.error(e);
                     alert("Error de conexión");
                 }
             }
