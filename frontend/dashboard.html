@@ -113,6 +113,49 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="dashboard-stats"></div>
 
+                <div class="bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden mb-8">
+                    <div class="p-6 border-b flex items-center justify-between bg-red-50/50">
+                        <h2 class="font-bold text-red-800 flex items-center gap-2">
+                            <i data-lucide="calendar-off" class="text-red-500 w-5 h-5"></i>
+                            Inventario Vencido (Retirar de Uso)
+                        </h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left table-auto">
+                            <thead class="bg-slate-50 text-[11px] uppercase font-bold text-slate-500 tracking-widest">
+                                <tr>
+                                    <th class="px-8 py-4">Material</th>
+                                    <th class="px-8 py-4">Lote</th>
+                                    <th class="px-8 py-4 text-red-600">Fecha Vencimiento</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-vencidos" class="divide-y divide-slate-100 text-sm">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+                    <div class="p-6 border-b flex items-center justify-between bg-indigo-50/50">
+                        <h2 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="droplets" class="text-indigo-500 w-5 h-5"></i>
+                            Reactivos con Volumen Crítico (< 50 mL) </h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left table-auto">
+                            <thead class="bg-slate-50 text-[11px] uppercase font-bold text-slate-500 tracking-widest">
+                                <tr>
+                                    <th class="px-8 py-4">Reactivo</th>
+                                    <th class="px-8 py-4">Características</th>
+                                    <th class="px-8 py-4">Volumen Actual</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-reactivos-criticos" class="divide-y divide-slate-100 text-sm">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div class="p-6 border-b flex items-center justify-between bg-slate-50/50">
                         <h2 class="font-bold text-slate-800 flex items-center gap-2">
@@ -416,12 +459,15 @@
 
         async function cargarDashboard() {
             try {
-                // --- 1. Banner de Vencimientos (Advertencia de Frascos Individuales) ---
+                // --- 1. Gestión de Vencimientos (Banners y Tabla Detallada) ---
                 const resVence = await fetch(`${API_URL}/alertas-vencimiento`);
                 const vencidos = await resVence.json();
+
                 const banner = document.getElementById('alarmas-vencimiento');
+                const tablaVencidos = document.getElementById('lista-vencidos');
 
                 if (vencidos && vencidos.length > 0) {
+                    // Actualizar Banners de Alarma
                     banner.innerHTML = vencidos.map(v => `
                 <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl flex items-center gap-4 mb-3 shadow-sm">
                     <div class="bg-amber-500 text-white p-2 rounded-lg">
@@ -435,11 +481,21 @@
                 </div>
             `).join('');
                     banner.classList.remove('hidden');
+
+                    // Llenar la Tabla de Patrones Vencidos
+                    tablaVencidos.innerHTML = vencidos.map(v => `
+                <tr class="hover:bg-red-50/30 transition-colors">
+                    <td class="px-8 py-4 font-bold text-slate-700">${v.material}</td>
+                    <td class="px-8 py-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-mono">${v.lote}</span></td>
+                    <td class="px-8 py-4 text-red-600 font-bold">${new Date(v.fecha_vencimiento).toLocaleDateString()}</td>
+                </tr>
+            `).join('');
                 } else {
                     banner.classList.add('hidden');
+                    tablaVencidos.innerHTML = `<tr><td colspan="3" class="px-8 py-10 text-center text-slate-400 italic">No hay registros vencidos</td></tr>`;
                 }
 
-                // --- 2. Tarjetas de Estadísticas (Incluyendo la de CRISIS) ---
+                // --- 2. Tarjetas de Estadísticas (Resumen General) ---
                 const resResumen = await fetch(`${API_URL}/dashboard/resumen`);
                 const data = await resResumen.json();
 
@@ -476,8 +532,81 @@
             </div>
         `;
 
+                // --- 3. Reactivos con Volumen Crítico (< 50 mL) ---
+                const resMateriales = await fetch(`${API_URL}/materiales`);
+                const materiales = await resMateriales.json();
+                const tablaCriticos = document.getElementById('lista-reactivos-criticos');
+
+                // Filtrar solo reactivos con volumen < 50
+                const criticos = materiales.filter(m => m.tipo === 'Reactivos' && m.stock < 50);
+
+                if (criticos.length > 0) {
+                    tablaCriticos.innerHTML = criticos.map(m => `
+                <tr class="hover:bg-indigo-50/30 transition-colors">
+                    <td class="px-8 py-4">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-slate-800">${m.material}</span>
+                            <span class="text-[10px] text-indigo-500 uppercase font-bold">Reactivo</span>
+                        </div>
+                    </td>
+                    <td class="px-8 py-4 text-slate-500 text-xs">${m.caracteristicas || 'Sin detalles'}</td>
+                    <td class="px-8 py-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-indigo-600 font-black text-sm">${m.stock} mL</span>
+                            <div class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></div>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+                } else {
+                    tablaCriticos.innerHTML = `<tr><td colspan="3" class="px-8 py-10 text-center text-slate-400 italic">Todos los reactivos tienen volumen suficiente</td></tr>`;
+                }
+
+                // Refrescar iconos de Lucide al final
                 lucide.createIcons();
-            } catch (e) { console.error("Error Dashboard:", e); }
+
+            } catch (e) {
+                console.error("Error al cargar el Dashboard:", e);
+            }
+        }
+
+        async function cargarReactivosCriticos() {
+            try {
+                // Obtenemos todos los materiales para filtrar reactivos < 50mL
+                const res = await fetch(`${API_URL}/materiales`);
+                const materiales = await res.json();
+                const tablaBody = document.getElementById('lista-reactivos-criticos');
+
+                // Filtramos: Que sean Reactivos Y stock < 50
+                const criticos = materiales.filter(m => m.tipo === 'Reactivos' && m.stock < 50);
+
+                if (criticos.length === 0) {
+                    tablaBody.innerHTML = `<tr><td colspan="3" class="px-8 py-10 text-center text-slate-400 italic">Todos los reactivos tienen volumen suficiente</td></tr>`;
+                    return;
+                }
+
+                tablaBody.innerHTML = criticos.map(m => `
+            <tr class="hover:bg-indigo-50/30 transition-colors">
+                <td class="px-8 py-4">
+                    <div class="flex flex-col">
+                        <span class="font-bold text-slate-800">${m.material}</span>
+                        <span class="text-[10px] text-indigo-500 uppercase font-bold">Reactivo</span>
+                    </div>
+                </td>
+                <td class="px-8 py-4 text-slate-500 text-xs">${m.caracteristicas || 'Sin detalles'}</td>
+                <td class="px-8 py-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-indigo-600 font-black text-sm">${m.stock} mL</span>
+                        <div class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></div>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+                lucide.createIcons(); // Refrescar iconos si es necesario
+            } catch (e) {
+                console.error("Error cargando reactivos críticos:", e);
+            }
         }
 
         async function cargarMateriales() {
