@@ -7,6 +7,7 @@
     <title>LabAsset 360 | Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
 
@@ -187,6 +188,15 @@
                         <p class="text-slate-500">Gestion de inventario y genera pedidos por WhatsApp.</p>
                     </div>
                     <div class="flex gap-3">
+
+                        <button onclick="exportarCategoria('Reactivos')"
+                            class="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-2 font-bold hover:bg-emerald-100 transition-all border border-emerald-200 shadow-sm">
+                            <i data-lucide="file-spreadsheet" size="18"></i> Reagentes .xlsx
+                        </button>
+                        <button onclick="exportarCategoria('Vidriería')"
+                            class="bg-blue-50 text-blue-700 px-4 py-3 rounded-xl flex items-center gap-2 font-bold hover:bg-blue-100 transition-all border border-blue-200 shadow-sm">
+                            <i data-lucide="file-spreadsheet" size="18"></i> Vidriería .xlsx
+                        </button>
                         <button onclick="openModal('modal')"
                             class="bg-slate-900 text-white px-5 py-3 rounded-xl flex items-center gap-2 font-bold hover:bg-slate-800 transition-all shadow-lg">
                             <i data-lucide="database-zap" size="18"></i> Nuevo Activo
@@ -1271,6 +1281,46 @@
                 lucide.createIcons();
             }
         });
+
+        async function exportarCategoria(categoria) {
+            try {
+                // 1. Obtener los datos frescos de la API
+                const res = await fetch(`${API_URL}/materiales`);
+                const materiales = await res.json();
+
+                // 2. Filtrar por la categoría seleccionada
+                const filtrados = materiales.filter(m => m.tipo === categoria);
+
+                if (filtrados.length === 0) {
+                    alert(`No hay datos registrados en la categoría: ${categoria}`);
+                    return;
+                }
+
+                // 3. Mapear los datos para que las columnas tengan nombres profesionales en el Excel
+                const datosFormateados = filtrados.map(m => ({
+                    "ID": m.id,
+                    "Material/Nombre": m.material,
+                    "Características Técnicas": m.caracteristicas || "N/A",
+                    "Stock Actual": m.stock,
+                    "Unidad": categoria === 'Reactivos' ? 'mL' : 'Unidades',
+                    "Stock Mínimo": m.stock_minimo,
+                    "Estado": m.stock <= m.stock_minimo ? "CRÍTICO" : "OK"
+                }));
+
+                // 4. Crear el libro de Excel con SheetJS
+                const hoja = XLSX.utils.json_to_sheet(datosFormateados);
+                const libro = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(libro, hoja, categoria);
+
+                // 5. Generar la descarga del archivo
+                const fecha = new Date().toISOString().split('T')[0];
+                XLSX.writeFile(libro, `Inventario_${categoria}_${fecha}.xlsx`);
+
+            } catch (error) {
+                console.error("Error al exportar Excel:", error);
+                alert("Error al conectar con la base de datos para la exportación.");
+            }
+        }
     </script>
 
     <div id="modal-nuevo-lote"
